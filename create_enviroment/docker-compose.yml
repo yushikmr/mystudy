@@ -1,0 +1,12 @@
+version: '3'
+services:
+        jupyterenv:
+                build:
+                        context:  .
+                        dockerfile: Dockerfile
+                container_name: jupyterenv
+                ports: 
+                        - "8888:8888"
+                volumes: 
+                        - .:/home/user/work
+                tty: true
