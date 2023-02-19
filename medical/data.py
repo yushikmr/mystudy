@@ -9,6 +9,7 @@ import torch
 import os
 from torch.utils.data import Dataset
 from multiprocessing import Pool
+import logging
 
 
 class C20Patient:
@@ -26,17 +27,17 @@ class C20Patient:
         self.samplingrate = int(self.fs / self.freq)
         self._df = self.record.to_dataframe()\
                 .iloc[::self.samplingrate]
-        self._df = self.df.iloc[:self.samplingsize]
+        self._df = self.df.iloc[:self.samplingsize].fillna(0)
         self._get_Xnp()
         
     
-    def _get_labelid(self, record_path):
+    def _get_labelids(self, record_path):
         with open(record_path, "r") as f:
             text = f.readlines()
         line =  [t for t in text if "Dx" in t][0]
-        self._labelid = re.sub(r"\D", "", line)
-
-
+        _labelids:List[str] = re.findall(r'\d+', line)
+        self._labelids:List[str] = [lid for lid in _labelids 
+                                        if lid in self._labelsdict.keys()]
 
     @property
     def df(self)->pd.DataFrame:
@@ -44,21 +45,26 @@ class C20Patient:
 
     def get_labelID(self):
         if not hasattr(self, "_labelid"):
-            self._get_labelid(self.path)
-        return self._labelid
+            self._get_labelids(self.path)
+        return self._labelids
     
     @property
-    def get_label(self):
+    def get_label(self)->List[str]:
         if not hasattr(self, "_labelid"):
-            self._get_labelid(self.path)
-        return self._labelsdict[self._labelid]
+            self._get_labelids(self.path)
+        return [self._labelsdict[i] for i in self._labelids]
+
+    @property
+    def Xnp(self):
+        return self._Xnp
 
     @property
     def Ynp(self):
-        return np.array(
-            [(1 if self.get_label == l else 0 ) for l in self.labelnames],
-            dtype=np.float32
-            )
+        ynp = np.zeros(len(self.labelnames), dtype=np.float32)
+        for l in self.get_label:
+            ind = self.labelnames.index(l)
+            ynp[ind] = 1
+        return ynp
 
     def _get_Xnp(self):
         self._Xnp =  self.df.values.astype(np.float32)
@@ -72,7 +78,7 @@ class C20Patient:
         return torch.from_numpy(self.Ynp)
 
     def checklabel(self)->bool:
-        hasvalidlabel = self.get_labelID() in self._labelsdict.keys()
+        hasvalidlabel = self.Ynp.sum() > 0.0
         hasenoughtsize = self.df.shape[0] >= self.samplingsize
         if hasvalidlabel and hasenoughtsize:
             return True
@@ -183,5 +189,46 @@ class C20Dataset(Dataset):
         y = patient.toTensorY
         return X, y
         
-    
+class C20DatasetOnMemory(Dataset):
+
+    def __init__(
+            self, 
+            valid_files_csv, 
+            num_channels, 
+            sample_size, 
+            num_classes) -> None:
+        """"""
+        logging.info("Dataset on Memory.........")
+        self.patients_files = pd.read_csv(valid_files_csv)
+        logging.info(f"num of patients : {self.patients_files.shape[0]}")
+        self._len = self.patients_files.shape[0]
+
+        self.num_channels = num_channels
+        self.sample_size = sample_size
+        self.num_classes = num_classes
+
+        self._create_tensor()
+
+    def __len__(self):
+        return self._len
+     
+    def _create_tensor(self):
+        logging.info("loading all data .............")
+        X_list = []
+        y_list = []
+        for i in range(self.patients_files.shape[0]):
+            f = Path(self.patients_files.iloc[i, 0])
+            p = C20Patient(f)
+            X_list.append(p.toTensorX.reshape(1, self.num_channels, self.sample_size))
+            y_list.append(p.toTensorY.reshape(1, self.num_classes))
+            
+        self.X = torch.cat(X_list, dim=0)
+        self.y = torch.cat(y_list, dim=0) 
+        logging.info("done loading all data .............") 
+
+    def __getitem__(self, index) -> Tuple[torch.Tensor]:
+
+        return self.X[index], self.y[index]
+
+     
     
