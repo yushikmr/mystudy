@@ -78,10 +78,10 @@ class MLP(nn.Module):
         x = self.fc2(x)
         return x
 
-class CondNet1D(nn.Module):
+class ResNet1D(nn.Module):
 
     def __init__(self, in_channels, num_classes) -> None:
-        super(CondNet1D, self).__init__()
+        super(ResNet1D, self).__init__()
 
         self.conv1 = nn.Conv1d(in_channels=in_channels, out_channels=12, kernel_size=7, stride=3, padding=3)
         self.block1 = Block(in_channels=12, out_channels=32)
@@ -92,7 +92,7 @@ class CondNet1D(nn.Module):
         self.pool = nn.AdaptiveAvgPool1d((1))
 
         self.fc = MLP(256, 256, 27)
-        self.act = torch.nn.Softmax(dim=1)
+        self.act = torch.nn.Sigmoid()
 
     def forward(self, x):
 
@@ -104,7 +104,7 @@ class CondNet1D(nn.Module):
         x = self.pool(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)
-        # x = self.act(x)
+        x = self.act(x)
 
         return x
     
@@ -115,3 +115,37 @@ class CondNet1D(nn.Module):
             if p.requires_grad:
                 self._numtrainableparam += p.numel()
         return self._numtrainableparam
+
+
+class HierarchyConv1D(nn.Module):
+    def __init__(self, in_channels, num_classes) -> None:
+        super(HierarchyConv1D, self).__init__()
+
+        self.conv1 = nn.Conv1d(in_channels=in_channels, out_channels=12, kernel_size=7, stride=3, padding=3)
+        self.block1 = Block(in_channels=12, out_channels=32)
+        self.block2 = Block(in_channels=32, out_channels=64)
+        self.block3 = Block(in_channels=64, out_channels=128)
+        self.block4 = Block(in_channels=128, out_channels=256)
+
+        self.pool = nn.AdaptiveAvgPool1d((1))
+
+        self.fc = MLP(480, 256, 27)
+        self.act = torch.nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x1 = self.block1(x)
+        x2 = self.block2(x1)
+        x3 = self.block3(x2)
+        x4 = self.block4(x3)
+
+        x1 = self.pool(x1)
+        x2 = self.pool(x2)
+        x3 = self.pool(x3)
+        x4 = self.pool(x4)
+
+        x = torch.cat([x1, x2, x3, x4], dim=1)
+        x = torch.flatten(x, 1)
+        out = self.fc(x)
+        out = self.act(out)
+        return out

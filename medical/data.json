@@ -1,7 +1,7 @@
 {
     "challenge-2020":{
         "ecg_type":["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"],
-        "freq":100,
+        "freq":200,
         "samplingsize":1000,
         "labelnames":
             ["IAVB", "AF", "AFL", "Brady", "CRBBB", "IRBBB", "LAnFB", "LAD", "LBBB", "LQRSV", "NSIVCB", "PR", "PAC", "PVC", "LPR", "LQT", "QAb", "RAD", "RBBB", "SA", "SB", "NSR", "STach", "SVPB", "TAb", "TInv", "VPB"],
