@@ -13,5 +13,14 @@ int main() {
 
     std::cout << *y << std::endl;
 
+    int n = 10;
+    std::unique_ptr<double[]> z(new double[n]);
+    for (size_t i = 0; i < n; i++)
+    {
+        z[i] = 0.;
+    }
+
+    z[2] = 1.;
+    
     return 0;
 }
