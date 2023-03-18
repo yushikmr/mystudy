@@ -60,6 +60,13 @@ class Matrix{
         std::unique_ptr< std::unique_ptr<double[]>[]> assignment_value(){
             return std::move(value);
         }
+
+        double getv(int i, int j){
+            return double(value[i][j]);
+        }
+        void swap_row(int i1, int i2){
+            std::swap(value[i1], value[i2]);
+        }
         
 
 };
