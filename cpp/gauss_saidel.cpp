@@ -126,7 +126,7 @@ class GaussSaidel{
 };
 
 int main(){
-    GaussSaidel gs1("data/sample01.txt", EPS, MAXITER);
+    GaussSaidel gs1("data/sample05.txt", EPS, MAXITER);
     gs1.showmat();
     
     std::pair<int, double> result;
