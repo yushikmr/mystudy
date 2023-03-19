@@ -3,6 +3,15 @@
 #include <memory>
 #include <vector>
 #include <cmath>
+#include <time.h>
+
+#define XL 0
+#define XU 0
+#define YL 0
+#define YU 0.01
+#define NX 200
+#define NY 200
+#define NITER 10000
 
 class ConstDirichlet{
     public:
@@ -200,14 +209,20 @@ class LaplacesEq{
 int main(){
 
     
+    clock_t start = clock(); 
 
-    ConstDirichlet dir(0, 0, 0, 0.03);
-    ForceField ff(100, 100);
-    ff.update(30, 30, -100);
-    ff.update(70, 70, 100);
-    LaplacesEq eq(100, 100, dir, ff);
-    eq.solve(3000);
+    ConstDirichlet dir(XL, XU, YL, YU);
+    ForceField ff(NX, NX);
+    ff.update(50, 50, -100);
+    ff.update(150, 150, 100);
+    LaplacesEq eq(NX, NY, dir, ff);
+    eq.solve(NITER);
 
-    eq.save_sol("data/output03.txt");
+    clock_t end = clock(); 
+    std::cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
+
+    eq.save_sol("data/output04.txt");
+
+    
     return 0;
 }
